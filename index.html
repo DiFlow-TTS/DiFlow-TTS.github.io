@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="generator" content="Hugo 0.88.1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,400,700" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" href=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
+	<link rel="stylesheet" href="css/custom.css">
+	<link rel="stylesheet" href="css/normalize.css">
+
+	<title>DiFlow-TTS</title>
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+
+<body data-new-gr-c-s-check-loaded="14.1091.0" data-gr-ext-installed="">
+
+<div class="container" >
+<header role="banner">
+</header>
+<main role="main">
+<article itemscope itemtype="https://schema.org/BlogPosting">
+
+<div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">
+	<div class="text-center">
+	<h2>DiFlow-TTS: </h2>
+      <h3><b>Di</b>screte <b>Flow</b> Matching with Factorized Speech Tokens <br> for Low-Latency Zero-Shot <b>T</b>ext-T</b>o-<b>S</b>peech</h3>
+
+	  <!-- <p>
+		<p>Xinsheng Wang<sup>1,2</sup>, Mingqi Jiang<sup>3</sup>, Ziyang Ma<sup>4,5</sup>, Ziyu Zhang<sup>6</sup>, 
+		Songxiang Liu<sup>7</sup>, Linqin Li<sup>3</sup>, Zheng Liang<sup>4</sup>, Qixi Zheng<sup>4</sup>,
+		Rui Wang<sup>3</sup>, Xiaoqin Feng<sup>3</sup>, Weizhen Bian<sup>1</sup>,
+        Zhen Ye<sup>1</sup>, Sitong Cheng<sup>1</sup>, Ruibin Yuan<sup>1</sup>, Zhixian Zhao<sup>6</sup>, Xinfa Zhu<sup>6</sup>,
+		Jiahao Pan<sup>1</sup>, Liumeng Xue<sup>1</sup>, Pengcheng Zhu<sup>8</sup>, Yunlin Chen<sup>3</sup>, Zhifei Li<sup>3</sup>, 
+		 Xie Chen<sup>3</sup>,Lei Xie<sup>6</sup>, Yike Guo<sup>1</sup>, Wei Xue<sup>1</sup></p>
+	  </p>
+        
+	   </p>
+        <p>
+		<sup>1</sup>Hong Kong University of Science and Technology<br>
+        <sup>2</sup>SparkAudio<br>
+		<sup>3</sup>Shanghai Mobvoi Information Technology Co., Ltd<br>
+		<sup>4</sup>Shanghai Jiao Tong University<br>
+		<sup>5</sup>Nanyang Technological University<br>
+		<sup>6</sup>Northwestern Polytechnical University<br>
+		<sup>7</sup>Independent Researcher<br>
+		<sup>8</sup>Fuxi AI Lab, NetEase, Inc<br>
+	  </p> -->
+
+	 
+	  <p>
+		<a href="https://github.com">GitHub Repo</a>
+		<!-- <a href="https://huggingface.co/SparkAudio/Spark-TTS-0.5B">Hugging Face</a> -->
+	  </p>
+	 
+	  
+
+
+        <!-- <p class="fst-italic mb-0">
+        	<br>
+          Spark-TTS
+      <p></p>
+        </p>
+        <p><b>SparkAudio</b></p> -->
+	</div>
+
+	<p>
+		Zero-shot Text-to-Speech (TTS) aims to synthesize high-quality speech that mimics the voice of an unseen speaker using only a short reference sample, requiring not only speaker adaptation but also accurate modeling of prosodic attributes. Recent approaches based on language models, diffusion, and flow matching have shown promising results in zero-shot TTS, but still suffer from slow inference and repetition artifacts. Discrete codec representations have been widely adopted for speech synthesis, and recent works have begun to explore diffusion models in purely discrete settings, suggesting the potential of discrete generative modeling for speech synthesis. However, existing flow-matching methods typically embed these discrete tokens into a continuous space and apply continuous flow matching, which may not fully leverage the advantages of discrete representations. To address these challenges, we introduce <strong>DiFlow-TTS</strong>, which, to the best of our knowledge, is the first model to explore purely Discrete Flow Matching for speech synthesis. <strong>DiFlow-TTS</strong> explicitly models factorized speech attributes within a compact and unified architecture. It leverages in-context learning by conditioning on textual content, along with prosodic and acoustic attributes extracted from a reference speech, enabling effective attribute cloning in a zero-shot setting. In addition, the model employs a factorized flow prediction mechanism with distinct heads for prosody and acoustic details, allowing it to learn aspect-specific distributions. Experimental results demonstrate that <strong>DiFlow-TTS</strong> achieves promising performance in several key metrics, including naturalness, prosody, preservation of speaker style, and energy control. It also maintains a compact model size and achieves low-latency inference, generating speech up to 25.8 times faster than the latest existing baselines.
+	</p>
+
+	<p>
+	<b>Contents</b>
+      <ul>
+        <li><a href="#overall-architecture">Overall Architecture</a></li>
+        <li><a href="#detailed-architecture">Detailed Architecture</a></li>
+		<li><a href="#zero-shot-celebrities">Zero-shot TTS (Celebrities)</a></li>
+        <li><a href="#zero-shot-librispeech">Zero-shot TTS (LibriSpeech)</a></li>
+      </ul>
+	</p>
+
+	
+</div>
+
+
+<div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">		
+	<h2 id="overall-architecture" style="text-align: center;">Overall Architecture</h2>
+	<body>
+	<p style="text-align: center;">
+		<img src="figures/overall-model.png" height="300" width="600">
+	</p>
+	</body>
+		<p style="text-align: center;" >
+			<b>Figure 1.</b> Overview of DiLow-TTS. The model decomposes the speech prompt into timbre, prosody, and acoustic tokens using a codec encoder. Input text is processed by PCM to generate content tokens and embeddings. The Factorized Discrete Flow Denoiser generates prosody, and acoustic tokens conditioned on content embeddings, and tokens from speech prompt. A codec decoder reconstructs the final waveform.
+		</p>
+</div>
+
+
+<div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">		
+	<h2 id="detailed-architecture" style="text-align: center;">Detailed Architecture</h2>
+	<body>
+	<p style="text-align: center;">
+		<img src="figures/detailed-model.png" height="400" width="1000">
+	</p>
+	</body>
+		<p style="text-align: center;" >
+			<b>Figure 2.</b> The detailed components of DiFlow TTS. The architecture consists of three main components: (a) Speech Tokenization, which extracts discrete tokens and a speaker embedding from a raw speech; (b) Phoneme-Content Mapper, which maps input phonemes to discrete content tokens and generates the corresponding content embeddings; and (c) Factorized Discrete Flow Denoiser, which performs discrete flow matching conditioned on the content embeddings, speaker embedding, and the discrete prosody and acoustic tokens derived from the reference speech prompt.
+		</p>
+</div>
+
+
+
+
+<div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">
+	<h2 id="zero-shot-celebrities" style="text-align: center;">Zero-shot TTS (Celebrities)</h2> <p>
+        DiFlow-TTS is capable of mimicking celebrity voices. The following examples are provided strictly for research purposes.
+		<div class="table-responsive pt-3">
+			<table class="table table-hover pt-2">
+				<thead>
+				<tr>
+				<th style="vertical-align : middle;text-align: center">Celebrity </th>
+				<th style="vertical-align : middle;text-align: center">Target Transcript </th>
+				<th style="vertical-align : middle;text-align: center">Prompt</th>
+				<th style="vertical-align : middle;text-align: center">DiFlow-TTS</th>
+				</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="1">Donald Trump</td>
+						<td style="vertical-align : middle;text-align:center;">We know technology is advancing quickly, but AI is moving even faster. It's already transforming our lives - from the way we work and stay connected, to how we tackle some of the world's biggest challenges.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/prompt/trump_promptvn.wav" autoplay/>Your browser does not support the audio element.</audio><br>From Spark-TTS's Demo</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/synth/synth_trump.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="1">Optimus Prime</td>
+						<td style="vertical-align : middle;text-align:center;">I don't really care what you call me. I've been a silent spectator, watching species evolve, empires rise and fall. But always remember, I am mighty and enduring. Respect me and I'll nurture you; ignore me and you shall face the consequences.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/prompt/optimusprime_ours_all.wav" autoplay/>Your browser does not support the audio element.</audio><br>From DiTTo-TTS's Demo</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/synth/synth_optimus.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="1">Benedict Cumberbatch</td>
+						<td style="vertical-align : middle;text-align:center;">The best love is the kind that awakens the soul and makes us reach for more, that plants a fire in our hearts and brings peace to our minds. And that's what you've given me. That's what I'd hoped to give you forever.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/prompt/sherlock_ours_all.wav" autoplay/>Your browser does not support the audio element.</audio><br>From DiTTo-TTS's Demo</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/synth/synth_sherlock.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="1">Mark Zuckerberg</td>
+						<td style="vertical-align : middle;text-align:center;">It is our choices that show what we truly are, far more than our abilities.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/prompt/zuck_ours_all.wav" autoplay/>Your browser does not support the audio element.</audio><br>From DiTTo-TTS's Demo</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/celebrities/synth/synth_zuck.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+
+				</tbody>
+			</table>
+		</div>
+</div>
+
+
+
+<div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">
+	<h2 id="zero-shot-librispeech" style="text-align: center;">Zero-shot TTS (LibriSpeech)</h2> <p>
+        All speakers are unseen during training. The audio samples are taken from the LibriSpeech test-clean dataset, using audio prompt lengths of 1s, 3s, and 5s.
+		<div class="table-responsive pt-3">
+			<table class="table table-hover pt-2">
+				<thead>
+				<tr>
+				<th style="vertical-align : middle;text-align: center">Prompt Duration </th>
+				<th style="vertical-align : middle;text-align: center">Target Transcript </th>
+				<th style="vertical-align : middle;text-align: center">Prompt</th>
+				<th style="vertical-align : middle;text-align: center">DiFlow-TTS</th>
+                <th style="vertical-align : middle;text-align: center">Spark-TTS</th>
+                <th style="vertical-align : middle;text-align: center">VoiceCraft</th>
+                <th style="vertical-align : middle;text-align: center">NaturalSpeech 2</th>
+                <th style="vertical-align : middle;text-align: center">VALL-E</th>
+                <th style="vertical-align : middle;text-align: center">F5-TTS</th>
+                <th style="vertical-align : middle;text-align: center">OZSpeech</th>
+				</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="5">1 second</td>
+						<td style="vertical-align : middle;text-align:center;">therefore her majesty paid no attention to anyone and no one paid any attention to her.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/prompt/8555-284447-0014.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/diflow-tts/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/sparktts/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/voicecraft/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/ns2/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/valle/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/f5/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/oz/8555-284447-0007.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;">he often stopped to examine the trees nor did he cross a rivulet without attentively considering the quantity the velocity and the color of its waters.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/prompt/1320-122617-0029.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/diflow-tts/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/sparktts/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/voicecraft/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/ns2/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/valle/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/f5/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/oz/1320-122612-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">as used in the speech of everyday life the word carries an undertone of deprecation.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/prompt/3570-5695-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/diflow-tts/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/sparktts/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/voicecraft/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/ns2/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/valle/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/f5/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/oz/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">i stood with my back to the wall for i wanted no sword reaching out of the dark for me.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/prompt/5142-33396-0067.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/diflow-tts/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/sparktts/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/voicecraft/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/ns2/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/valle/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/f5/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/oz/5142-33396-0024.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">i wanted nothing more than to see my country again my friends my modest quarters by the botanical gardens my dearly beloved collections.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/prompt/8463-294828-0009.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/diflow-tts/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/sparktts/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/voicecraft/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/ns2/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/valle/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/f5/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/1s/synth/oz/8463-294828-0003.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="5">3 seconds</td>
+						<td style="vertical-align : middle;text-align:center;">as soon as these dispositions were made the scout turned to david and gave him his parting instructions.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/prompt/1320-122617-0011.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/diflow-tts/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/sparktts/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/voicecraft/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/ns2/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/valle/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/f5/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/oz/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">in both these high mythical subjects the surrounding nature though suffering is still dignified and beautiful.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/prompt/1188-133604-0039.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/diflow-tts/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/sparktts/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/voicecraft/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/ns2/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/valle/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/f5/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/oz/1188-133604-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">the meter continued in general service during eighteen ninety nine and probably up to the close of the century.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/prompt/2300-131720-0008.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/diflow-tts/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/sparktts/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/voicecraft/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/ns2/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/valle/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/f5/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/oz/2300-131720-0036.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">that is the best way to decide for the spear will always point somewhere and one thing is as good as another.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/prompt/5142-33396-0032.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/diflow-tts/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/sparktts/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/voicecraft/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/ns2/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/valle/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/f5/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/oz/5142-33396-0054.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">there came upon me a sudden shock when i heard these words which exceeded anything which i had yet felt.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/prompt/8455-210777-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/diflow-tts/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/sparktts/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/voicecraft/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/ns2/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/valle/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/f5/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/3s/synth/oz/8455-210777-0041.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;" rowspan="5">5 seconds</td>
+						<td style="vertical-align : middle;text-align:center;">after proceeding a few miles the progress of hawkeye who led the advance became more deliberate and watchful.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/prompt/1320-122617-0017.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/diflow-tts/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/sparktts/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/voicecraft/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/ns2/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/valle/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/f5/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/oz/1320-122612-0002.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">he had preconceived ideas about everything and his idea about americans was that they should be engineers or mechanics.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/prompt/4446-2273-0004.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/diflow-tts/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/sparktts/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/voicecraft/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/ns2/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/valle/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/f5/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/oz/4446-2271-0001.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">as used in the speech of everyday life the word carries an undertone of deprecation.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/prompt/3570-5695-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/diflow-tts/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/sparktts/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/voicecraft/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/ns2/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/valle/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/f5/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/oz/3570-5696-0006.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">so no tales got out to the neighbors besides it was a lonely place and by good luck no one came that way.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/prompt/5142-33396-0051.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/diflow-tts/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/sparktts/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/voicecraft/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/ns2/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/valle/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/f5/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/oz/5142-33396-0042.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+                    <tr>
+						<td style="vertical-align : middle;text-align:center;">as soon as these dispositions were made the scout turned to david and gave him his parting instructions.</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/prompt/1320-122617-0011.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/diflow-tts/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/sparktts/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/voicecraft/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/ns2/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/valle/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/f5/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+                        <td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/librispeech/5s/synth/oz/1320-122617-0027.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+
+				</tbody>
+			</table>
+		</div>
+</div>
+
+
+
+<!-- <div class="container pt-5 mt-5 shadow-lg p-5 mb-5 bg-white rounded">
+	<h2 id="fine-grained_control" style="text-align: center;">Fine-Grained Control</h2>
+		<div class="table-responsive pt-3">
+			<table class="table table-hover pt-2">
+				<thead>
+				<tr>
+				<th style="vertical-align : middle;text-align: center">Pitch Value for Male (Mel)<br> The range of all values falls within Moderate.  </th>
+				<th style="vertical-align : middle;text-align: center"> Generation for Chinese <br>(4 SPS) </th>
+				<th style="vertical-align : middle;text-align: center">Pitch Value for Female (Mel)<br>The range of all values falls within Moderate. </th>
+				<th style="vertical-align : middle;text-align: center"> Generation for English <br>(5 SPS)</th>
+				</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;">165</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/male/male_pitch_165.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;">265</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/female/female_pitch_265.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;">175</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/male/male_pitch_175.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;">275</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/female/female_pitch_275.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+					<tr>
+						<td style="vertical-align : middle;text-align:center;">185</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/male/male_pitch_185.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+						<td style="vertical-align : middle;text-align:center;">285</td>
+						<td style="vertical-align : middle;text-align:center;"><audio controls="controls" style="width: 190px;"><source src="audios/control/fine_grained/female/female_pitch_285.wav" autoplay/>Your browser does not support the audio element.</audio></td>
+					</tr>
+					
+					
+				</tbody>
+			</table>
+		</div>
+</div> -->
+
+
+
+
+</article>
+</main>
+</div>
+
+</body>
+</html>
