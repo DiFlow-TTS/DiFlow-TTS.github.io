@@ -194,3 +194,20 @@ blockquote cite {
     color: #888888;
     font-size: 0.9em;
 }
+
+.table-responsive {
+  max-height: 600px; /* adjust height as needed */
+  overflow-y: auto;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background-color: white; /* match your background */
+  z-index: 2; /* ensure it stays on top */
+  box-shadow: 0 0px 0px -1px rgba(0, 0, 0, 0.4); /* optional shadow for visibility */
+}
+
+.table tbody tr:nth-child(5n) {
+    border-bottom: 2px solid #000;
+  }
