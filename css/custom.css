@@ -210,4 +210,12 @@ blockquote cite {
 
 .table tbody tr:nth-child(5n) {
     border-bottom: 2px solid #000;
-  }
+}
+
+.zoom-hover {
+        transition: transform 0.3s ease;
+}
+
+.zoom-hover:hover {
+    transform: scale(1.1); /* Zoom in on hover */
+}
