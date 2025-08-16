@@ -219,3 +219,14 @@ blockquote cite {
 .zoom-hover:hover {
     transform: scale(1.1); /* Zoom in on hover */
 }
+
+.container {
+    background: radial-gradient(circle at 20% 30%, #ffe5ec, transparent 40%),
+                radial-gradient(circle at 80% 20%, #fff3e0, transparent 40%),
+                radial-gradient(circle at 30% 80%, #e0f7ff, transparent 40%),
+                radial-gradient(circle at 70% 70%, #f3e5f5, transparent 40%);
+    background-color: #ffffff; /* fallback */
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
